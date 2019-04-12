@@ -1,0 +1,32 @@
+{% extends 'admin/Base.html' %}
+{% block content %}
+<!-- DataTables -->
+    <div class="card mb-3">
+    <div class="card-body">
+        <div class="table-responsive">
+        <table class="table table-striped table-bordered" id="dataTable" width="100%" cellspacing="0">
+          <thead>
+          <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Email</th>
+            <th>Public Key</th>
+            <th>Approve</th>
+          </tr>
+          </thead>
+          {% for upload in content %}
+          <tbody>
+          <tr>
+            <td><center>{{ upload['firstName'] }}</center></td>
+            <td><center>{{ upload['lastName'] }}</center></td>
+            <td><center>{{ upload['email'] }}</center></td>
+            <td><center><textarea rows="2" class="form-control" readonly>{{ upload['publickey'] }}</textarea></center></td>
+            <td><center><a href="{{ url_for('approve_artist', id = upload['_id']) }}">Approve</a></center></td>
+          </tr>
+          <tbody>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+    </div>
+{% endblock %}
