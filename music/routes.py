@@ -1,7 +1,7 @@
 import os
 import secrets
 import base62
-import ipfsApi as ipfsapi
+import ipfsapi
 import binascii
 import Crypto
 import Crypto.Random
@@ -231,10 +231,10 @@ def new_wallet():
 @app.route('/generate/transaction', methods=['POST'])
 def generate_transaction():
 	
-	sender_address = request.form['sender_address']
-	sender_private_key = request.form['sender_private_key']
-	recipient_address = request.form['recipient_address']
-	value = request.form['amount']
+	sender_address = request.json['sender_address']
+	sender_private_key = request.json['sender_private_key']
+	recipient_address = request.json['recipient_address']
+	value = request.json['amount']
 
 	transaction = Transaction(sender_address, sender_private_key, recipient_address, value)
 
@@ -304,3 +304,75 @@ def redirect_to_short(short):
 	uploaded_object = upload.find_one({'_id': id})
 	return redirect("{0}{1}".format(app.config['REDIRECT_BASE_URL'], uploaded_object['ipfs_hash']), code=302)
 
+# node with which our application interacts, there can be multiple
+# such nodes as well
+CONNECTED_NODE_ADDRESS = 'http://0.0.0.0:9001'
+
+@app.route('/audioplayer')
+def audioplayer():
+    songs = os.listdir(os.path.abspath('music/static/media'))
+    song_name = "No Audio"
+    return render_template('user/audioplayer.html',
+                           songs=songs,
+                           song_name = song_name
+                           )
+
+@app.route('/submit', methods=['GET','POST'])
+def submit_button():
+    user_hash = enduser.find_one({'_id': current_user.get_id()})
+    """
+    Endpoint to create a new transaction via our application.
+    """
+    song_name = request.form["song_name"]
+    song_location = "/static/media/" + song_name 
+    
+    file_info = uploads.find_one({'filename':song_name})
+    artist = enduser.find_one({'_id': file_info['user_id']})
+
+    artist_name = artist['firstName']
+    current_user_name = user_hash['firstName']
+    song_hash = file_info['ipfs_hash']
+    current_user_hash = user_hash['publickey']
+    artist_hash = artist['publickey']
+
+    post_object = {
+        'song': song_name,
+        'sender_address': current_user_hash,
+        'sender_private_key': user_hash['privatekey'],
+        'recipient_address': artist_hash,
+        'amount': 1,
+        'song_hash': song_hash
+    }
+
+    enduser.update_one({'_id': user_hash['_id']}, {'$inc':{'balance': -1}})
+    enduser.update_one({'_id': artist['_id']}, {'$inc':{'balance': 1}})
+    
+    # Submit a transaction
+    new_tx_address = "{}/generate/transaction".format(CONNECTED_NODE_ADDRESS)
+
+    r = requests.post(new_tx_address,
+                  json=post_object,
+                  headers={'Content-type': 'application/json'})
+
+    data =  r.json()
+
+    param  = {
+    	'sender_address' : data['transaction']['sender_address'],
+    	'recipient_address' : data['transaction']['recipient_address'],
+    	'amount' : data['transaction']['value'],
+    	'signature' : data['signature']
+    }
+
+    nx_address = f"{CONNECTED_NODE_ADDRESS}/transactions/new"
+    a = requests.post(nx_address,
+    	json=param,
+    	headers={'Content-type': 'application/json'})
+
+    print(a)
+
+    return render_template('user/audioplayer.html',
+                    song_name = song_name,
+                    listener = current_user_name,
+                    artist = artist_name,
+                    amount = 1,
+                    song_location = song_location)

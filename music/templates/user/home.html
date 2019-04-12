@@ -22,7 +22,11 @@
           {% for upload in uploaded %}
           <tbody>
           <tr>
-            <td>{{ upload.filename }}</td>
+            <td>
+              <form action="/submit" method="post" id = 'playSong' target="audioplayer">
+                  <input type="submit" name = "song_name" value="{{ upload.filename }}" onclick="document.getElementById('MineRequest').click()" id = "mine" style="padding: 0;text-align: left;">
+              </form>
+            </td>
             <td><a href="{{ config['REDIRECT_BASE_URL']}}/{{ upload.ipfs_hash }}">{{ upload.ipfs_hash}}</a></td>
             <td><a href="{{ config['SHORT_REDIRECT_DOMAIN'] }}/s/{{ upload.short_url }}">http://localhost:9001/s/{{ upload.short_url }}</a></td>
           </tr>
